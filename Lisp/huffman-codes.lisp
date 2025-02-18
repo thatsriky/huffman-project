@@ -30,7 +30,7 @@
                     (adjoin-set x (cdr set))))))
 
 ;;;; procedure that transforms the list of pairs into an ordered set
-;;;; of leaves
+;;;; of leaves, ready to be merged according to the Huffman algorithm
 (defun make-leaf-set pairs
   (if (null? pairs)
       '()
