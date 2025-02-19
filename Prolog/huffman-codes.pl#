@@ -91,3 +91,32 @@ hucodec_encode_file(Filename, Tree, Bits) :-
     hucodec_encode(Message, Tree, Bits).
 
 % huffman-codes.pl ends here
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
