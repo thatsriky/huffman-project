@@ -33,18 +33,33 @@
   (cadr node))
 
 ;;;; Decodifica una sequenza di bit usando un albero di Huffman
+;; (defun hucodec-decode (bits huffman-tree)
+;;   (labels ((decode-1 (bits current-branch)
+;;              (cond ((null bits)
+;;                     (if (leaf-p current-branch)
+;;                         (list (leaf-symbol current-branch))
+;;                         '()))
+;;                    (t (let ((next-branch (choose-branch (first bits) current-branch)))
+;;                         (if (leaf-p next-branch)
+;;                             (cons (leaf-symbol next-branch)
+;;                                   (decode-1 (rest bits) huffman-tree))
+;;                             (decode-1 (rest bits) next-branch)))))))
+;;    (decode-1 bits huffman-tree)))
+
 (defun hucodec-decode (bits huffman-tree)
-  (labels ((decode-1 (bits current-branch)
-             (cond ((null bits)
-                    (if (leaf-p current-branch)
-                        (list (leaf-symbol current-branch))
-                        '()))
-                   (t (let ((next-branch (choose-branch (first bits) current-branch)))
-                        (if (leaf-p next-branch)
-                            (cons (leaf-symbol next-branch)
-                                  (decode-1 (rest bits) huffman-tree))
-                            (decode-1 (rest bits) next-branch)))))))
-    (decode-1 bits huffman-tree)))
+  (labels ((decode-1 (bits current-branch decoded-symbols)
+             (if (null bits)
+                 ;; Se non ci sono più bit, ritorniamo i simboli decodificati
+                 (reverse decoded-symbols)
+                 ;; Altrimenti scegliamo il prossimo ramo
+                 (let ((next-branch (choose-branch (first bits) current-branch)))
+                   (if (leaf-p next-branch)
+                       ;; Se siamo su una foglia, aggiungiamo il simbolo e ripartiamo dalla radice
+                       (decode-1 (rest bits) huffman-tree (cons (leaf-symbol next-branch) decoded-symbols))
+                       ;; Altrimenti continuiamo la decodifica
+                       (decode-1 (rest bits) next-branch decoded-symbols))))))
+    (decode-1 bits huffman-tree '())))
+
 
 ;;;; Sceglie il ramo successivo nell'albero Huffman basato su un bit
 (defun choose-branch (bit branch)

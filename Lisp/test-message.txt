@@ -1,9 +1,1 @@
-Hello, World! This is a test message for Huffman encoding.
-Symbols: @#$%^&*()_+-=[]{}|;:'",.<>?/\
-Numbers: 1234567890
-Unicode: Ω≈ç√∫˜µ≤≥÷
-Multiline message:
-This is a second line.
-And this is a third line with more symbols: ¤§™©®✓
-
-End of test message.
+(A B A C D A E A F A B B A A G A H)

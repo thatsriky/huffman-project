@@ -1,43 +1,55 @@
 /* Riccardo Piatti 909687
-
    -*- Mode: Prolog -*-
-
    huffman-codes.pl
 */
-
 % Decodes a sequence of bits using a Huffman tree
 hucodec_decode([], _, []).
 hucodec_decode(Bits, Tree, Message) :-
     decode_bits(Bits, Tree, Tree, Message).
 
-decode_bits([], _, _, []).
-decode_bits([Bit|Bits], Tree, node(L, R, _, _), Message) :-
-    (Bit = 0 -> NextBranch = L ; NextBranch = R),
-    decode_bits(Bits, Tree, NextBranch, Message).
-decode_bits(Bits, Tree, leaf(Symbol, _), [Symbol|Rest]) :-
+decode_bits([], _, leaf(Symbol, _), [Symbol]).
+decode_bits([], _, node(_, _, _, _), []).
+decode_bits([_|Bits], Tree, leaf(Symbol, _), [Symbol|Rest]) :-
     decode_bits(Bits, Tree, Tree, Rest).
+decode_bits([Bit|Bits], Tree, node(L, R, _, _), Message) :-
+    (Bit = 0 -> decode_bits(Bits, Tree, L, Message) ;
+                decode_bits(Bits, Tree, R, Message)).
 
 % Encodes a message using a Huffman tree
 hucodec_encode([], _, []).
 hucodec_encode([Symbol|Message], Tree, Bits) :-
-    encode_symbol(Symbol, Tree, SymbolBits),
+    hucodec_generate_symbol_bits_table(Tree, SymbolBitsTable),
+    member(sb(Symbol, SymbolBits), SymbolBitsTable),
     hucodec_encode(Message, Tree, RestBits),
     append(SymbolBits, RestBits, Bits).
 
-encode_symbol(Symbol, leaf(Symbol, _), []).
-encode_symbol(Symbol, node(L, _, _, _), [0|Bits]) :-
-    encode_symbol(Symbol, L, Bits).
-encode_symbol(Symbol, node(_, R, _, _), [1|Bits]) :-
-    encode_symbol(Symbol, R, Bits).
+% Helper function to get the weight of a tree node
+weight(leaf(_, W), W).
+weight(node(_, _, _, W), W).
+
+% Helper function to get symbols from a tree node
+symbols(leaf(S, _), [S]).
+symbols(node(_, _, Symbols, _), Symbols).
 
 % Generates a Huffman tree from a list of symbol-weight pairs
 hucodec_generate_huffman_tree(SymbolsWeights, HuffmanTree) :-
     make_leaf_set(SymbolsWeights, LeafSet),
-    successive_merge(LeafSet, HuffmanTree).
+    sort_by_weight(LeafSet, SortedLeafSet),
+    successive_merge(SortedLeafSet, HuffmanTree).
 
 make_leaf_set([], []).
 make_leaf_set([sw(S, W)|Rest], [leaf(S, W)|LeafSet]) :-
     make_leaf_set(Rest, LeafSet).
+
+sort_by_weight(List, Sorted) :-
+    predsort(compare_weights, List, Sorted).
+
+compare_weights(Order, T1, T2) :-
+    weight(T1, W1),
+    weight(T2, W2),
+    (W1 < W2 -> Order = '<' ;
+     W1 > W2 -> Order = '>' ;
+                Order = '=').
 
 successive_merge([Tree], Tree).
 successive_merge([T1, T2|Rest], HuffmanTree) :-
@@ -45,13 +57,13 @@ successive_merge([T1, T2|Rest], HuffmanTree) :-
     insert_sorted(MergedNode, Rest, NewSet),
     successive_merge(NewSet, HuffmanTree).
 
-merge_nodes(leaf(S1, W1), leaf(S2, W2), node(leaf(S1, W1), leaf(S2, W2), [S1, S2], W)) :-
-    W is W1 + W2.
-merge_nodes(Tree1, Tree2, node(Tree1, Tree2, Symbols, W)) :-
-    Symbols = [Tree1, Tree2],
-    W is W1 + W2,
-    weight(Tree1, W1),
-    weight(Tree2, W2).
+merge_nodes(Node1, Node2, node(Node1, Node2, MergedSymbols, MergedWeight)) :-
+    weight(Node1, W1),
+    weight(Node2, W2),
+    MergedWeight is W1 + W2,
+    symbols(Node1, S1),
+    symbols(Node2, S2),
+    append(S1, S2, MergedSymbols).
 
 insert_sorted(Tree, [], [Tree]).
 insert_sorted(Tree, [T|Ts], [Tree, T|Ts]) :-
@@ -63,12 +75,20 @@ insert_sorted(Tree, [T|Ts], [T|NewTs]) :-
 
 % Generates a symbol-to-bits table from a Huffman tree
 hucodec_generate_symbol_bits_table(Tree, Table) :-
-    traverse(Tree, [], Table).
+    traverse(Tree, [], TableReversed),
+    reverse_bit_paths(TableReversed, Table).
+
+reverse_bit_paths([], []).
+reverse_bit_paths([sb(S, Path)|Rest], [sb(S, RevPath)|RevRest]) :-
+    reverse(Path, RevPath),
+    reverse_bit_paths(Rest, RevRest).
 
 traverse(leaf(S, _), Path, [sb(S, Path)]).
 traverse(node(L, R, _, _), Path, Table) :-
-    traverse(L, [0|Path], TableL),
-    traverse(R, [1|Path], TableR),
+    append(Path, [0], LeftPath),
+    append(Path, [1], RightPath),
+    traverse(L, LeftPath, TableL),
+    traverse(R, RightPath, TableR),
     append(TableL, TableR, Table).
 
 % Prints the Huffman tree structure for debugging
@@ -77,8 +97,9 @@ hucodec_print_huffman_tree(Tree) :-
 
 print_tree(leaf(S, W), Indent) :-
     tab(Indent), write(S), write(' ('), write(W), write(')'), nl.
-print_tree(node(L, R, _, W), Indent) :-
+print_tree(node(L, R, Symbols, W), Indent) :-
     tab(Indent), write('[NODE] ('), write(W), write(')'), nl,
+    tab(Indent), write('Symbols: '), write(Symbols), nl,
     Indent1 is Indent + 2,
     print_tree(L, Indent1),
     print_tree(R, Indent1).
@@ -86,27 +107,15 @@ print_tree(node(L, R, _, W), Indent) :-
 % Reads a file and encodes its content using a Huffman tree
 hucodec_encode_file(Filename, Tree, Bits) :-
     open(Filename, read, Stream),
-    read(Stream, Message),
+    read_file_content(Stream, Message),
     close(Stream),
     hucodec_encode(Message, Tree, Bits).
 
+read_file_content(Stream, Content) :-
+    read_term(Stream, Term, []),
+    (Term == end_of_file -> Content = [] ;
+                           Content = Term).
 % huffman-codes.pl ends here
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
