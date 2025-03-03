@@ -1,1 +1,4 @@
-(A B A C D A E A F A B B A A G A H)
+Questo è un messaggio di test.
+Contiene lettere, numeri (1234) e simboli speciali: !@#$%
+Ogni linea deve essere mantenuta separata.
+La codifica di Huffman deve gestire tutto correttamente!
