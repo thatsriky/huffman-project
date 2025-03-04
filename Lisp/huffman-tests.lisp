@@ -1,6 +1,6 @@
 ;;;; huffman-tests.lisp - Test suite per huffman-codes.lisp
 
-(load "huffman-codesv2.lisp")
+(load "huffman-codesv3.lisp")
 
 (defun run-tests ()
   (format t "\n===== TEST HUFFMAN =====\n")

@@ -33,19 +33,6 @@
   (cadr node))
 
 ;;;; Decodifica una sequenza di bit usando un albero di Huffman
-;; (defun hucodec-decode (bits huffman-tree)
-;;   (labels ((decode-1 (bits current-branch decoded-symbols)
-;;              (cond
-;;                ((null bits)
-;;                 (if (leaf-p current-branch)
-;;                     (reverse (cons (leaf-symbol current-branch) decoded-symbols))
-;;                     (error "Invalid bit sequence: decoding incomplete.")))
-;;                (t (let ((next-branch (choose-branch (first bits) current-branch)))
-;;                     (if (leaf-p next-branch)
-;;                         (decode-1 (rest bits) huffman-tree (cons (leaf-symbol next-branch) decoded-symbols))
-;;                         (decode-1 (rest bits) next-branch decoded-symbols)))))))
-;;     (decode-1 bits huffman-tree '())))
-
 (defun hucodec-decode (bits huffman-tree)
   (labels ((decode-1 (bits current-branch decoded-symbols)
              (cond
