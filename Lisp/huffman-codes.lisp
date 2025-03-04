@@ -33,32 +33,19 @@
   (cadr node))
 
 ;;;; Decodifica una sequenza di bit usando un albero di Huffman
-;; (defun hucodec-decode (bits huffman-tree)
-;;   (labels ((decode-1 (bits current-branch)
-;;              (cond ((null bits)
-;;                     (if (leaf-p current-branch)
-;;                         (list (leaf-symbol current-branch))
-;;                         '()))
-;;                    (t (let ((next-branch (choose-branch (first bits) current-branch)))
-;;                         (if (leaf-p next-branch)
-;;                             (cons (leaf-symbol next-branch)
-;;                                   (decode-1 (rest bits) huffman-tree))
-;;                             (decode-1 (rest bits) next-branch)))))))
-;;    (decode-1 bits huffman-tree)))
-
 (defun hucodec-decode (bits huffman-tree)
   (labels ((decode-1 (bits current-branch decoded-symbols)
              (cond
-               ;; Se non ci sono più bit, restituisco i simboli decodificati
-               ((null bits) (reverse decoded-symbols))
-               ;; Procedo nel percorso dell'albero
-               (t (let ((next-branch (choose-branch (first bits) current-branch)))
-                    (if (leaf-p next-branch)
-                        ;; Se ho trovato un simbolo, lo salvo e riparto dalla radice
-                        (decode-1 (rest bits) huffman-tree (cons (leaf-symbol next-branch) decoded-symbols))
-                        ;; Altrimenti continuo a decodificare
-                        (decode-1 (rest bits) next-branch decoded-symbols)))))))
-    (decode-1 bits huffman-tree '())))
+               ((null bits)
+                (if (leaf-p current-branch)
+                    (reverse (cons (leaf-symbol current-branch) decoded-symbols))
+                    (error "Invalid bit sequence: decoding incomplete.")))
+               ((leaf-p current-branch)
+                (decode-1 bits huffman-tree (cons (leaf-symbol current-branch) decoded-symbols)))
+               (t
+                (let ((next-branch (choose-branch (first bits) current-branch)))
+                  (decode-1 (rest bits) next-branch decoded-symbols)))))))
+    (decode-1 bits huffman-tree '()))
 
 ;;;; Sceglie il ramo successivo nell'albero Huffman basato su un bit
 (defun choose-branch (bit branch)
@@ -74,11 +61,8 @@
 
 ;;;; Costruisce un insieme ordinato di foglie a partire da coppie simbolo-peso
 (defun make-leaf-set (pairs)
-  (if (null pairs)
-      '()
-      (let ((pair (car pairs)))
-        (adjoin-set (make-leaf (car pair) (cdr pair))
-                    (make-leaf-set (cdr pairs))))))
+  (let ((sorted (stable-sort (copy-list pairs) #'< :key #'cdr)))
+    (mapcar (lambda (pair) (make-leaf (car pair) (cdr pair))) sorted)))
 
 ;;;; Codifica un messaggio usando un albero di Huffman
 (defun hucodec-encode (message huffman-tree)
@@ -90,7 +74,7 @@
 ;;;; Trova la sequenza di bit per un simbolo dato un albero Huffman
 (defun encode-symbol (symbol huffman-tree)
   (labels ((traverse (node path)
-             (cond ((leaf-p node) (if (eq (leaf-symbol node) symbol) path nil))
+             (cond ((leaf-p node) (if (equal (leaf-symbol node) symbol) path nil))
                    (t (or (traverse (node-left node) (append path '(0)))
                           (traverse (node-right node) (append path '(1))))))))
     (or (traverse huffman-tree '())
@@ -98,6 +82,8 @@
 
 ;;;; Genera un albero di Huffman da una lista di coppie simbolo-peso
 (defun hucodec-generate-huffman-tree (symbols-n-weights)
+  (if (null symbols-n-weights)
+      (error "Cannot generate Huffman tree from empty symbol-weight list."))
   (successive-merge (make-leaf-set symbols-n-weights)))
 
 ;;;; Unisce ricorsivamente i nodi per costruire un albero di Huffman
@@ -119,7 +105,6 @@
                          (traverse (node-right node) (cons 1 path))))))
     (traverse huffman-tree '())))
 
-  
 ;;;; Stampa la struttura dell'albero di Huffman per debugging
 (defun hucodec-print-huffman-tree (huffman-tree &optional (indent-level 0))
   (if (leaf-p huffman-tree)
@@ -130,7 +115,12 @@
         (hucodec-print-huffman-tree (node-right huffman-tree) (+ indent-level 2)))))
 
 ;;;; Legge un file e codifica il suo contenuto usando un albero di Huffman
+(defun read-file-contents (stream)
+  (let ((data (read stream nil nil)))
+    (if data
+        (cons data (read-file-contents stream))
+        '())))
+
 (defun hucodec-encode-file (filename huffman-tree)
   (with-open-file (stream filename :direction :input)
-    (let ((message (read stream)))
-      (hucodec-encode message huffman-tree))))
+    (hucodec-encode (read-file-contents stream) huffman-tree)))

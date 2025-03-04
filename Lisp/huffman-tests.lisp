@@ -1,6 +1,6 @@
 ;;;; huffman-tests.lisp - Test suite per huffman-codes.lisp
 
-(load "huffman-codes.lisp")
+(load "huffman-codesv2.lisp")
 
 (defun run-tests ()
   (format t "\n===== TEST HUFFMAN =====\n")
@@ -27,8 +27,6 @@
       (format t "Tabella simboli-bits: ~A~%" table))
 
     ;; Test con file
-    (with-open-file (out "test-message.txt" :direction :output :if-exists :supersede)
-      (format out "~A" message))
     (let ((file-encoded (hucodec-encode-file "test-message.txt" tree)))
       (format t "Messaggio da file codificato: ~A~%" file-encoded))
 

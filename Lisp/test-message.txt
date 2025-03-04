@@ -2,3 +2,4 @@ Questo è un messaggio di test.
 Contiene lettere, numeri (1234) e simboli speciali: !@#$%
 Ogni linea deve essere mantenuta separata.
 La codifica di Huffman deve gestire tutto correttamente!
+AAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaOOOOooo.
