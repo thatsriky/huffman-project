@@ -39,12 +39,16 @@
              (cond
                ((null bits)
                 (if (leaf-p current-branch)
-                    (reverse (cons (leaf-symbol current-branch) decoded-symbols))
+                    (reverse (cons (leaf-symbol current-branch)
+                                   decoded-symbols))
                     (error "Invalid bit sequence: decoding incomplete.")))
                ((leaf-p current-branch)
-                (decode-1 bits huffman-tree (cons (leaf-symbol current-branch) decoded-symbols)))
+                (decode-1 bits huffman-tree
+                          (cons (leaf-symbol current-branch)
+                                decoded-symbols)))
                (t
-                (let ((next-branch (choose-branch (first bits) current-branch)))
+                (let ((next-branch (choose-branch (first bits)
+                                                  current-branch)))
                   (decode-1 (rest bits) next-branch decoded-symbols))))))
     (decode-1 bits huffman-tree '())))
 
@@ -65,30 +69,32 @@
 
 ;;;; Funzione per leggere il contenuto di un file mantenendo tutti i simboli
 (defun read-file-symbols (stream)
-  (let ((char (read-char stream nil nil)))  ;; Legge carattere per carattere
+  (let ((char (read-char stream nil nil)))
     (if char
         (cons char (read-file-symbols stream))
-        '())))  ;; Ritorna la lista di caratteri letti
+        '())))
 
 ;;;; Codifica un file generando automaticamente l'albero di Huffman
-;(defun hucodec-encode-file (filename huffman-tree)
- ; (with-open-file (stream filename :direction :input)
-  ;  (let ((symbols (read-file-symbols stream)))
-   ;   (hucodec-encode symbols huffman-tree))))  ;; Restituisce il risultato della codifica
 (defun hucodec-encode-file (filename huffman-tree)
   (with-open-file (stream filename :direction :input)
-    (let* ((symbols (read-file-symbols stream))   ;; Legge i caratteri dal file
-           (clean-symbols (mapcar (lambda (char) (intern (string char))) symbols))) ;; Converte #\x in "x" con string char, poi converte "x" in 'x con intern
-      (hucodec-encode clean-symbols huffman-tree))))  ;; Codifica i simboli puliti
-
+    (let* ((symbols (read-file-symbols stream))
+           (clean-symbols (mapcar (lambda (char)
+                                    (intern (string char)))
+                                  symbols)))
+      (hucodec-encode clean-symbols huffman-tree))))
 
 ;;;; Codifica un messaggio usando un albero di Huffman
 (defun hucodec-encode (message huffman-tree)
   (let ((table (hucodec-generate-symbol-bits-table huffman-tree)))
-    (let ((missing (remove-if (lambda (sym) (assoc sym table :test #'equal)) message)))
+    (let ((missing (remove-if (lambda (sym)
+                                (assoc sym table :test #'equal))
+                              message)))
       (if missing
-          (error "I seguenti simboli non sono presenti nell'albero di Huffman: ~A" missing)
-          (apply #'append (mapcar (lambda (sym) (cdr (assoc sym table :test #'equal))) message))))))
+          (error "I seguenti simboli non sono presenti nell'albero di Huffman: ~A"
+                 missing)
+          (apply #'append (mapcar (lambda (sym)
+                                     (cdr (assoc sym table :test #'equal)))
+                                   message))))))
 
 ;;;; Genera un albero di Huffman da una lista di coppie simbolo-peso
 (defun hucodec-generate-huffman-tree (symbols-n-weights)
@@ -120,7 +126,8 @@
 ;;;; Stampa la struttura dell'albero di Huffman per debugging
 (defun hucodec-print-huffman-tree (huffman-tree &optional (indent-level 0))
   (if (leaf-p huffman-tree)
-      (format t "~V@T~A (~D)~%" indent-level (leaf-symbol huffman-tree) (weight huffman-tree))
+      (format t "~V@T~A (~D)~%" indent-level
+              (leaf-symbol huffman-tree) (weight huffman-tree))
       (progn
         (format t "~V@T[NODE] (~D)~%" indent-level (weight huffman-tree))
         (hucodec-print-huffman-tree (node-left huffman-tree) (+ indent-level 2))
